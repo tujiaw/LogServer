@@ -31,7 +31,7 @@ Dialog::Dialog(QWidget *parent)
     connect(pbClear_, SIGNAL(clicked()), this, SLOT(slotClear()));
 
     udp_ = new QUdpSocket(this);
-    udp_->bind(QHostAddress::LocalHost, PORT);
+    udp_->bind(QHostAddress::Any, PORT);
     connect(udp_, SIGNAL(readyRead()), this, SLOT(slotReadPendingData()));
 
     QHBoxLayout *bottomLayout = new QHBoxLayout();
