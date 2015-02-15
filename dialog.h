@@ -7,6 +7,8 @@ class QListWidget;
 class QUdpSocket;
 class QPushButton;
 class QListWidgetItem;
+class QCheckBox;
+class QLineEdit;
 class Dialog : public QDialog
 {
     Q_OBJECT
@@ -17,13 +19,20 @@ public:
 
 private slots:
     void slotReadPendingData();
+    void slotStateChanged(int);
+    void slotTextChanged(const QString&);
     void slotPause();
     void slotClear();
     void slotItemDoubleClicked(QListWidgetItem*);
 
 private:
+    void filterShow(const QString &text);
+
+private:
     QListWidget *list_;
     QUdpSocket *udp_;
+    QCheckBox *cbFilter_;
+    QLineEdit *leFilter_;
     QPushButton *pbPause_;
     QPushButton *pbClear_;
     int index_;
