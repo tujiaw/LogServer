@@ -4,6 +4,8 @@
 #include <QHBoxLayout>
 #include <QtNetwork/QUdpSocket>
 #include <QPushButton>
+#include <QCheckBox>
+#include <QLineEdit>
 #include <QClipboard>
 #include <QApplication>
 
@@ -22,6 +24,13 @@ Dialog::Dialog(QWidget *parent)
     list_->setAutoScroll(true);
     connect(list_, SIGNAL(itemDoubleClicked(QListWidgetItem *)), this, SLOT(slotItemDoubleClicked(QListWidgetItem*)));
 
+    cbFilter_ = new QCheckBox("Filter", this);
+    cbFilter_->setChecked(true);
+    connect(cbFilter_, SIGNAL(stateChanged(int)), this, SLOT(slotStateChanged(int)));
+
+    leFilter_ = new QLineEdit(this);
+    connect(leFilter_, SIGNAL(textChanged(QString)), this, SLOT(slotTextChanged(QString)));
+
     pbPause_ = new QPushButton("Stop", this);
     pbPause_->setCheckable(true);
     pbPause_->setChecked(false);
@@ -35,6 +44,8 @@ Dialog::Dialog(QWidget *parent)
     connect(udp_, SIGNAL(readyRead()), this, SLOT(slotReadPendingData()));
 
     QHBoxLayout *bottomLayout = new QHBoxLayout();
+    bottomLayout->addWidget(cbFilter_);
+    bottomLayout->addWidget(leFilter_);
     bottomLayout->addStretch();
     bottomLayout->addWidget(pbPause_);
     bottomLayout->addWidget(pbClear_);
@@ -59,13 +70,30 @@ void Dialog::slotReadPendingData()
         data.resize(udp_->pendingDatagramSize());
         QHostAddress senderHost;
         quint16 senderPort;
-        udp_->readDatagram(data.data(), data.size(), &senderHost, &senderPort);
+        udp_->readDatagram(data.data(), udp_->pendingDatagramSize(), &senderHost, &senderPort);
         if (pbPause_->isChecked()) {
             continue;
 		}
 		
-		list_->addItem(QString::number(++index_) + QString::fromUtf8(data));
+        QListWidgetItem *newItem = new QListWidgetItem(QString::number(++index_) + " - " + QString::fromUtf8(data));
+        list_->addItem(newItem);
         list_->setCurrentRow(list_->count() - 1);
+        if (cbFilter_->isChecked() && !leFilter_->text().isEmpty() && !newItem->text().contains(leFilter_->text())) {
+            newItem->setHidden(true);
+        }
+    }
+}
+
+void Dialog::slotStateChanged(int state)
+{
+    leFilter_->setEnabled(state == Qt::Checked);
+    filterShow(state == Qt::Checked ? leFilter_->text() : "");
+}
+
+void Dialog::slotTextChanged(const QString &text)
+{
+    if (cbFilter_->isChecked()) {
+        filterShow(text);
     }
 }
 
@@ -89,3 +117,17 @@ void Dialog::slotItemDoubleClicked(QListWidgetItem *item)
     QClipboard *clipboard = QApplication::clipboard();
     clipboard->setText(item->text());
 }
+
+void Dialog::filterShow(const QString &text)
+{
+    for (int i=0; i<list_->count(); i++) {
+
+        QListWidgetItem *item = list_->item(i);
+        if (text.trimmed().isEmpty())  {
+            item->setHidden(false);
+        } else {
+            item->setHidden(!item->text().contains(text));
+        }
+    }
+}
+
