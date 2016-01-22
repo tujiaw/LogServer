@@ -24,6 +24,8 @@ private slots:
     void slotPause();
     void slotClear();
     void slotItemDoubleClicked(QListWidgetItem*);
+	void slotScrollTimer();
+	void slotSetMaxCount();
 
 private:
     void filterShow(const QString &text);
@@ -31,11 +33,15 @@ private:
 private:
     QListWidget *list_;
     QUdpSocket *udp_;
+	QCheckBox *cbMaxCount_;
+	QLineEdit *leMaxCount_;
     QCheckBox *cbFilter_;
     QLineEdit *leFilter_;
     QPushButton *pbPause_;
     QPushButton *pbClear_;
     int index_;
+	QTimer *scrollTimer_;
+	int m_maxCount;
 };
 
 #endif // DIALOG_H

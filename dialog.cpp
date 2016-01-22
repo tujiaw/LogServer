@@ -8,6 +8,8 @@
 #include <QLineEdit>
 #include <QClipboard>
 #include <QApplication>
+#include <QTime>
+#include <QTimer>
 
 static unsigned short PORT = 5566;
 
@@ -20,9 +22,25 @@ Dialog::Dialog(QWidget *parent)
 	flags |= Qt::WindowCloseButtonHint;
 	this->setWindowFlags(flags);
 
+	scrollTimer_ = new QTimer();
+	scrollTimer_->setInterval(300);
+	connect(scrollTimer_, &QTimer::timeout, this, &Dialog::slotScrollTimer);
+
     list_ = new QListWidget(this);
     list_->setAutoScroll(true);
     connect(list_, SIGNAL(itemDoubleClicked(QListWidgetItem *)), this, SLOT(slotItemDoubleClicked(QListWidgetItem*)));
+
+	cbMaxCount_ = new QCheckBox("MaxCount", this);
+	cbMaxCount_->setChecked(true);
+
+	m_maxCount = 5000;
+	leMaxCount_ = new QLineEdit(this);
+	leMaxCount_->setFixedWidth(70);
+	leMaxCount_->setText(QString::number(m_maxCount));
+	QRegExp regx("[0-9]+$");
+	QValidator *validator = new QRegExpValidator(regx, leMaxCount_);
+	leMaxCount_->setValidator(validator);
+	connect(leMaxCount_, SIGNAL(textChanged(QString)), this, SLOT(slotTextChanged(QString)));
 
     cbFilter_ = new QCheckBox("Filter", this);
     cbFilter_->setChecked(true);
@@ -44,6 +62,8 @@ Dialog::Dialog(QWidget *parent)
     connect(udp_, SIGNAL(readyRead()), this, SLOT(slotReadPendingData()));
 
     QHBoxLayout *bottomLayout = new QHBoxLayout();
+	bottomLayout->addWidget(cbMaxCount_);
+	bottomLayout->addWidget(leMaxCount_);
     bottomLayout->addWidget(cbFilter_);
     bottomLayout->addWidget(leFilter_);
     bottomLayout->addStretch();
@@ -70,14 +90,22 @@ void Dialog::slotReadPendingData()
         data.resize(udp_->pendingDatagramSize());
         QHostAddress senderHost;
         quint16 senderPort;
+
         udp_->readDatagram(data.data(), udp_->pendingDatagramSize(), &senderHost, &senderPort);
         if (pbPause_->isChecked()) {
             continue;
 		}
-		
+
+		if (cbMaxCount_->isChecked() && list_->count() >= m_maxCount) {
+			for (int i=0; i<m_maxCount/10; i++) {
+				QListWidgetItem *item = list_->takeItem(0);
+				delete item;
+			}
+		}
+
         QListWidgetItem *newItem = new QListWidgetItem(QString::number(++index_) + " - " + QString::fromUtf8(data));
         list_->addItem(newItem);
-        list_->setCurrentRow(list_->count() - 1);
+		scrollTimer_->start();
         if (cbFilter_->isChecked() && !leFilter_->text().isEmpty() && !newItem->text().contains(leFilter_->text())) {
             newItem->setHidden(true);
         }
@@ -92,9 +120,13 @@ void Dialog::slotStateChanged(int state)
 
 void Dialog::slotTextChanged(const QString &text)
 {
-    if (cbFilter_->isChecked()) {
-        filterShow(text);
-    }
+	if (sender() == leFilter_) {
+		if (cbFilter_->isChecked()) {
+			filterShow(text);
+		}
+	} else if (sender() == leMaxCount_) {
+		QTimer::singleShot(3000, this, SLOT(slotSetMaxCount()));
+	}
 }
 
 void Dialog::slotPause()
@@ -118,10 +150,21 @@ void Dialog::slotItemDoubleClicked(QListWidgetItem *item)
     clipboard->setText(item->text());
 }
 
+void Dialog::slotScrollTimer()
+{
+	list_->scrollToBottom();
+	scrollTimer_->stop();
+}
+
+void Dialog::slotSetMaxCount()
+{
+	m_maxCount = leMaxCount_->text().toInt();
+	m_maxCount = qMax(10, m_maxCount);
+}
+
 void Dialog::filterShow(const QString &text)
 {
     for (int i=0; i<list_->count(); i++) {
-
         QListWidgetItem *item = list_->item(i);
         if (text.trimmed().isEmpty())  {
             item->setHidden(false);

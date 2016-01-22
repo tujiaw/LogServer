@@ -14,6 +14,8 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        dialog.cpp
+        dialog.cpp \
+    udp_log.cpp
 
-HEADERS  += dialog.h
+HEADERS  += dialog.h \
+    udp_log.h
