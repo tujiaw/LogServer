@@ -9,6 +9,7 @@ class QPushButton;
 class QListWidgetItem;
 class QCheckBox;
 class QLineEdit;
+class QComboBox;
 class Dialog : public QDialog
 {
     Q_OBJECT
@@ -19,8 +20,8 @@ public:
 
 private slots:
     void slotReadPendingData();
-    void slotStateChanged(int);
     void slotTextChanged(const QString&);
+    void slotCurrentIndexChanged(int index);
     void slotPause();
     void slotClear();
     void slotItemDoubleClicked(QListWidgetItem*);
@@ -29,14 +30,15 @@ private slots:
 	void slotSetMaxCount();
 
 private:
-    void filterShow(const QString &text);
+    bool isItemHidden(const QString &text);
+    void filterKey();
 
 private:
     QListWidget *list_;
     QUdpSocket *udp_;
 	QCheckBox *cbMaxCount_;
 	QLineEdit *leMaxCount_;
-    QCheckBox *cbFilter_;
+    QComboBox *cbBox_;
     QLineEdit *leFilter_;
     QPushButton *pbPause_;
     QPushButton *pbClear_;

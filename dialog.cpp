@@ -11,6 +11,7 @@
 #include <QTime>
 #include <QTimer>
 #include <QScrollBar>
+#include <QComboBox>
 
 static unsigned short PORT = 5566;
 
@@ -43,11 +44,12 @@ Dialog::Dialog(QWidget *parent)
 	leMaxCount_->setValidator(validator);
 	connect(leMaxCount_, SIGNAL(textChanged(QString)), this, SLOT(slotTextChanged(QString)));
 
-    cbFilter_ = new QCheckBox("Filter", this);
-    cbFilter_->setChecked(true);
-    connect(cbFilter_, SIGNAL(stateChanged(int)), this, SLOT(slotStateChanged(int)));
+    cbBox_ = new QComboBox(this);
+    cbBox_->addItems(QStringList() << "ShowKey" << "HideKey");
+    connect(cbBox_, SIGNAL(currentIndexChanged(int)), this, SLOT(slotCurrentIndexChanged(int)));
 
     leFilter_ = new QLineEdit(this);
+    leFilter_->setClearButtonEnabled(true);
     connect(leFilter_, SIGNAL(textChanged(QString)), this, SLOT(slotTextChanged(QString)));
 
     pbPause_ = new QPushButton("Stop", this);
@@ -65,7 +67,7 @@ Dialog::Dialog(QWidget *parent)
     QHBoxLayout *bottomLayout = new QHBoxLayout();
 	bottomLayout->addWidget(cbMaxCount_);
 	bottomLayout->addWidget(leMaxCount_);
-    bottomLayout->addWidget(cbFilter_);
+    bottomLayout->addWidget(cbBox_);
     bottomLayout->addWidget(leFilter_);
     bottomLayout->addStretch();
     bottomLayout->addWidget(pbPause_);
@@ -109,27 +111,24 @@ void Dialog::slotReadPendingData()
         if (!scrollTimer_->property("stop").toInt()) {
             scrollTimer_->start();
         }
-        if (cbFilter_->isChecked() && !leFilter_->text().isEmpty() && !newItem->text().contains(leFilter_->text())) {
-            newItem->setHidden(true);
-        }
-    }
-}
 
-void Dialog::slotStateChanged(int state)
-{
-    leFilter_->setEnabled(state == Qt::Checked);
-    filterShow(state == Qt::Checked ? leFilter_->text() : "");
+        bool isHidden = isItemHidden(newItem->text().trimmed());
+        newItem->setHidden(isHidden);
+    }
 }
 
 void Dialog::slotTextChanged(const QString &text)
 {
-	if (sender() == leFilter_) {
-		if (cbFilter_->isChecked()) {
-			filterShow(text);
-		}
-	} else if (sender() == leMaxCount_) {
+    if (sender() == leFilter_) {
+        filterKey();
+    } else if (sender() == leMaxCount_) {
 		QTimer::singleShot(3000, this, SLOT(slotSetMaxCount()));
 	}
+}
+
+void Dialog::slotCurrentIndexChanged(int index)
+{
+    filterKey();
 }
 
 void Dialog::slotPause()
@@ -181,15 +180,29 @@ void Dialog::slotSetMaxCount()
 	m_maxCount = qMax(10, m_maxCount);
 }
 
-void Dialog::filterShow(const QString &text)
+bool Dialog::isItemHidden(const QString &text)
+{
+    bool isHidden = false;
+    QString filterText = leFilter_->text().trimmed();
+    if (cbBox_->currentIndex() == 0) {
+        if (!filterText.isEmpty() && !text.contains(filterText)) {
+            isHidden = true;
+        }
+    } else if (cbBox_->currentIndex() == 1) {
+        if (!filterText.isEmpty() && text.contains(filterText)) {
+            isHidden = true;
+        }
+    }
+    return isHidden;
+}
+
+void Dialog::filterKey()
 {
     for (int i=0; i<list_->count(); i++) {
         QListWidgetItem *item = list_->item(i);
-        if (text.trimmed().isEmpty())  {
-            item->setHidden(false);
-        } else {
-            item->setHidden(!item->text().contains(text));
-        }
+        bool isHidden = isItemHidden(item->text().trimmed());
+        item->setHidden(isHidden);
     }
 }
+
 
