@@ -10,6 +10,7 @@
 #include <QApplication>
 #include <QTime>
 #include <QTimer>
+#include <QScrollBar>
 
 static unsigned short PORT = 5566;
 
@@ -27,8 +28,8 @@ Dialog::Dialog(QWidget *parent)
 	connect(scrollTimer_, &QTimer::timeout, this, &Dialog::slotScrollTimer);
 
     list_ = new QListWidget(this);
-    list_->setAutoScroll(true);
     connect(list_, SIGNAL(itemDoubleClicked(QListWidgetItem *)), this, SLOT(slotItemDoubleClicked(QListWidgetItem*)));
+    connect(list_->verticalScrollBar(), SIGNAL(valueChanged(int)), this, SLOT(slotVScrollBarValueChanged(int)));
 
 	cbMaxCount_ = new QCheckBox("MaxCount", this);
 	cbMaxCount_->setChecked(true);
@@ -105,7 +106,9 @@ void Dialog::slotReadPendingData()
 
         QListWidgetItem *newItem = new QListWidgetItem(QString::number(++index_) + " - " + QString::fromUtf8(data));
         list_->addItem(newItem);
-		scrollTimer_->start();
+        if (!scrollTimer_->property("stop").toInt()) {
+            scrollTimer_->start();
+        }
         if (cbFilter_->isChecked() && !leFilter_->text().isEmpty() && !newItem->text().contains(leFilter_->text())) {
             newItem->setHidden(true);
         }
@@ -148,6 +151,22 @@ void Dialog::slotItemDoubleClicked(QListWidgetItem *item)
 {
     QClipboard *clipboard = QApplication::clipboard();
     clipboard->setText(item->text());
+}
+
+void Dialog::slotVScrollBarValueChanged(int value)
+{
+    // 如果鼠标滚轮往上则暂停自动滚动到底部，鼠标滚轮滚动到底部则开启自动滚动到底部
+    static int s_oldValue = 0;
+    if (value < s_oldValue) {
+        scrollTimer_->setProperty("stop", 1);
+    } else {
+        if (scrollTimer_->property("stop").toInt()) {
+            if (value == list_->verticalScrollBar()->maximum()) {
+                scrollTimer_->setProperty("stop", 0);
+            }
+        }
+    }
+    s_oldValue = value;
 }
 
 void Dialog::slotScrollTimer()

@@ -24,6 +24,7 @@ private slots:
     void slotPause();
     void slotClear();
     void slotItemDoubleClicked(QListWidgetItem*);
+    void slotVScrollBarValueChanged(int value);
 	void slotScrollTimer();
 	void slotSetMaxCount();
 
