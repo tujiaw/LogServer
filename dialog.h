@@ -42,9 +42,11 @@ private:
     QLineEdit *leFilter_;
     QPushButton *pbPause_;
     QPushButton *pbClear_;
+
     int index_;
 	QTimer *scrollTimer_;
-	int m_maxCount;
+    int maxCount_;
+    int scrollBarOldValue_;
 };
 
 #endif // DIALOG_H

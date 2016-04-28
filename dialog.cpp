@@ -16,7 +16,7 @@
 static unsigned short PORT = 5566;
 
 Dialog::Dialog(QWidget *parent)
-    : QDialog(parent), index_(0)
+    : QDialog(parent), index_(0), scrollBarOldValue_(0)
 {
 	Qt::WindowFlags flags = Qt::Dialog;
 	flags |= Qt::WindowMinimizeButtonHint;
@@ -35,10 +35,10 @@ Dialog::Dialog(QWidget *parent)
 	cbMaxCount_ = new QCheckBox("MaxCount", this);
 	cbMaxCount_->setChecked(true);
 
-	m_maxCount = 5000;
+    maxCount_ = 5000;
 	leMaxCount_ = new QLineEdit(this);
 	leMaxCount_->setFixedWidth(70);
-	leMaxCount_->setText(QString::number(m_maxCount));
+    leMaxCount_->setText(QString::number(maxCount_));
 	QRegExp regx("[0-9]+$");
 	QValidator *validator = new QRegExpValidator(regx, leMaxCount_);
 	leMaxCount_->setValidator(validator);
@@ -85,7 +85,6 @@ Dialog::~Dialog()
 {
 }
 
-
 void Dialog::slotReadPendingData()
 {
     while (udp_->hasPendingDatagrams()) {
@@ -99,8 +98,8 @@ void Dialog::slotReadPendingData()
             continue;
 		}
 
-		if (cbMaxCount_->isChecked() && list_->count() >= m_maxCount) {
-			for (int i=0; i<m_maxCount/10; i++) {
+        if (cbMaxCount_->isChecked() && list_->count() >= maxCount_) {
+            for (int i=0; i<maxCount_/10; i++) {
 				QListWidgetItem *item = list_->takeItem(0);
 				delete item;
 			}
@@ -143,6 +142,7 @@ void Dialog::slotPause()
 void Dialog::slotClear()
 {
     index_ = 0;
+    scrollBarOldValue_ = 0;
     list_->clear();
 }
 
@@ -155,8 +155,7 @@ void Dialog::slotItemDoubleClicked(QListWidgetItem *item)
 void Dialog::slotVScrollBarValueChanged(int value)
 {
     // 如果鼠标滚轮往上则暂停自动滚动到底部，鼠标滚轮滚动到底部则开启自动滚动到底部
-    static int s_oldValue = 0;
-    if (value < s_oldValue) {
+    if (value < scrollBarOldValue_) {
         scrollTimer_->setProperty("stop", 1);
     } else {
         if (scrollTimer_->property("stop").toInt()) {
@@ -165,7 +164,7 @@ void Dialog::slotVScrollBarValueChanged(int value)
             }
         }
     }
-    s_oldValue = value;
+    scrollBarOldValue_ = value;
 }
 
 void Dialog::slotScrollTimer()
@@ -176,8 +175,8 @@ void Dialog::slotScrollTimer()
 
 void Dialog::slotSetMaxCount()
 {
-	m_maxCount = leMaxCount_->text().toInt();
-	m_maxCount = qMax(10, m_maxCount);
+    maxCount_ = leMaxCount_->text().toInt();
+    maxCount_ = qMax(10, maxCount_);
 }
 
 bool Dialog::isItemHidden(const QString &text)
